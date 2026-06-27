@@ -1,0 +1,2 @@
+"""Local media vault server."""
+

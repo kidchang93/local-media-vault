@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      DATA_DIR: /data
+      APP_PORT: "${APP_PORT:-8000}"
+      UPLOAD_ROOT: /media/j3/local-media-vault
+      APP_BASE_URL: "${APP_BASE_URL:-}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-changeme-admin}"
+      LCK_PASSWORD: "${LCK_PASSWORD:-changeme-lck}"
+      CSE_PASSWORD: "${CSE_PASSWORD:-changeme-cse}"
+      SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE:-false}"
+      MAX_FILE_SIZE_BYTES: "${MAX_FILE_SIZE_BYTES:-2147483648}"
+    volumes:
+      - ./data:/data
+      - "${J3_MOUNT_PATH:?Set J3_MOUNT_PATH to your mounted storage path}:/media/j3"

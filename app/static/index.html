@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>가족 미디어 보관함</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">LM</div>
+          <div>
+            <h1>가족 미디어 보관함</h1>
+            <p id="subtitle">같은 Wi-Fi에서만 쓰는 원본 저장소</p>
+          </div>
+        </div>
+        <button id="logoutButton" class="icon-button hidden" type="button" title="로그아웃">로그아웃</button>
+      </header>
+
+      <section id="loginPanel" class="login-layout">
+        <div class="login-visual" aria-hidden="true">
+          <div class="media-stack">
+            <div class="media-tile tile-a"></div>
+            <div class="media-tile tile-b"></div>
+            <div class="media-tile tile-c"></div>
+            <div class="media-tile tile-d"></div>
+          </div>
+          <div class="vault-status">
+            <span>로컬 저장소</span>
+            <strong>준비됨</strong>
+          </div>
+        </div>
+
+        <section class="auth-card">
+          <p class="eyebrow">같은 Wi-Fi 전용</p>
+          <h2>개인 미디어 보관함</h2>
+          <form id="loginForm" class="stack">
+            <label>
+              사용자
+              <select name="username">
+                <option value="lck">lck</option>
+                <option value="cse">cse</option>
+                <option value="admin">관리자</option>
+              </select>
+            </label>
+            <label>
+              비밀번호
+              <input name="password" type="password" autocomplete="current-password" required />
+            </label>
+            <button class="primary-action" type="submit">접속하기</button>
+          </form>
+        </section>
+      </section>
+
+      <section id="appPanel" class="hidden">
+        <section class="status-strip">
+          <div>
+            <span class="label">로그인 계정</span>
+            <strong id="displayName"></strong>
+          </div>
+          <div>
+            <span class="label">상위 폴더명</span>
+            <strong id="rootPrefix"></strong>
+          </div>
+          <div>
+            <span class="label">업로드 권한</span>
+            <strong id="permissionText"></strong>
+          </div>
+        </section>
+
+        <div class="workspace">
+          <section class="upload-surface">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">업로드</p>
+                <h2>원본 그대로 저장</h2>
+              </div>
+              <span id="fileSummary" class="soft-pill">선택된 파일 없음</span>
+            </div>
+
+            <form id="uploadForm" class="upload-form">
+              <section class="album-workflow">
+                <label>
+                  업로드할 앨범
+                  <select name="folder" id="folderSelect">
+                    <option value="">앨범을 선택하세요</option>
+                  </select>
+                </label>
+                <div class="new-album-card">
+                  <div>
+                    <strong>새 앨범 폴더</strong>
+                    <p class="hint">예: son, daughter, travel/jeju</p>
+                  </div>
+                  <div id="folderForm" class="folder-form">
+                    <input id="folderPathInput" name="relativePath" placeholder="son" required />
+                    <button id="createFolderButton" type="button">생성</button>
+                  </div>
+                </div>
+              </section>
+
+              <label class="file-drop">
+                <span class="drop-title">사진/영상 선택</span>
+                <span class="drop-subtitle">HEIC, JPG, PNG, MOV, MP4</span>
+                <input name="files" type="file" accept="image/*,video/*" multiple required />
+              </label>
+
+              <button id="uploadButton" class="primary-action" type="submit">업로드 시작</button>
+              <progress id="progress" class="hidden" value="0" max="100"></progress>
+            </form>
+            <p id="message" class="message"></p>
+          </section>
+
+          <aside class="side-rail">
+            <section class="panel">
+              <div class="section-head tight">
+                <div>
+                  <p class="eyebrow">앨범</p>
+                  <h2>앨범 폴더</h2>
+                </div>
+              </div>
+              <div id="folderList" class="folder-list"></div>
+            </section>
+          </aside>
+        </div>
+
+        <section class="panel uploads-panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">최근</p>
+              <h2>최근 업로드</h2>
+            </div>
+            <div class="section-actions">
+              <span id="uploadCount" class="soft-pill">0개</span>
+              <button id="refreshButton" class="ghost" type="button">새로고침</button>
+            </div>
+          </div>
+          <div id="uploadList" class="grid"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
