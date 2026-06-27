@@ -70,8 +70,23 @@ class ApiUploadTests(unittest.TestCase):
                     self.assertEqual(response.headers["content-type"], "image/jpeg")
 
                     response = client.post("/api/test-data/clear")
+                    self.assertEqual(response.status_code, 403)
+
+                    response = client.post(
+                        "/api/login",
+                        data={"username": "admin", "password": "admin-pass"},
+                    )
+                    self.assertEqual(response.status_code, 200)
+
+                    response = client.post("/api/test-data/clear")
                     self.assertEqual(response.status_code, 200)
                     self.assertEqual(response.json()["deletedUploads"], 12)
+
+                    response = client.post(
+                        "/api/login",
+                        data={"username": "lck", "password": "lck-pass"},
+                    )
+                    self.assertEqual(response.status_code, 200)
                     self.assertEqual(client.get("/api/uploads").json(), [])
                     self.assertEqual(list((settings.upload_root / "family").rglob("*")), [])
                 finally:

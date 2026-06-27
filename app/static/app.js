@@ -51,6 +51,7 @@ async function loadMe() {
     displayName.textContent = currentUser.displayName;
     rootPrefix.textContent = currentUser.rootPrefix;
     permissionText.textContent = currentUser.permissions.canUpload ? "업로드 가능" : "업로드 제한";
+    clearTestDataButton.classList.toggle("hidden", currentUser.role !== "admin");
     await loadFolders();
     await loadUploads();
   } catch {
@@ -58,6 +59,7 @@ async function loadMe() {
     loginPanel.classList.remove("hidden");
     appPanel.classList.add("hidden");
     logoutButton.classList.add("hidden");
+    clearTestDataButton.classList.add("hidden");
   }
 }
 
@@ -170,7 +172,7 @@ logoutButton.addEventListener("click", async () => {
 refreshButton.addEventListener("click", loadUploads);
 
 clearTestDataButton.addEventListener("click", async () => {
-  const ok = confirm("현재 계정의 업로드 기록과 저장된 테스트 파일을 삭제할까요?");
+  const ok = confirm("전체 업로드 기록과 저장된 테스트 파일을 삭제할까요?");
   if (!ok) return;
 
   clearTestDataButton.disabled = true;

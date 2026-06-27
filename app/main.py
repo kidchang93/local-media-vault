@@ -263,7 +263,7 @@ def list_uploads(
                    thumbnail_status, created_at
             FROM uploads
             WHERE user_id = ?
-            ORDER BY id DESC
+            ORDER BY created_at DESC, id DESC
             LIMIT 10
             """,
             (user["id"],),
@@ -454,14 +454,15 @@ def clear_test_data(
     user=Depends(get_current_user),
     settings: Settings = Depends(get_settings),
 ):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="관리자만 테스트 데이터를 삭제할 수 있습니다.")
+
     with connect(settings.db_path) as conn:
         rows = conn.execute(
             """
             SELECT stored_relative_path, thumbnail_relative_path
             FROM uploads
-            WHERE user_id = ?
-            """,
-            (user["id"],),
+            """
         ).fetchall()
 
     for row in rows:
@@ -470,8 +471,8 @@ def clear_test_data(
             remove_file_quietly(resolve_inside(settings.thumbnail_root, row["thumbnail_relative_path"]))
 
     with connect(settings.db_path) as conn:
-        conn.execute("DELETE FROM uploads WHERE user_id = ?", (user["id"],))
-        conn.execute("DELETE FROM folders WHERE owner_user_id = ?", (user["id"],))
+        conn.execute("DELETE FROM uploads")
+        conn.execute("DELETE FROM folders")
 
     prune_empty_directories(resolve_inside(settings.upload_root, COMMON_ROOT_PREFIX))
     prune_empty_directories(settings.thumbnail_root)
