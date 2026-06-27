@@ -10,15 +10,32 @@
 - `lck`, `cse` 로그인 기반 사용자 구분
 - 공통 `family` 저장소 아래 앨범 폴더 생성/선택
 - 앨범별 날짜 폴더 자동 생성
-- 사진 썸네일과 영상 대표 프레임 미리보기
+- 최근 업로드 10개 원본 미리보기
+- 테스트 업로드 기록과 파일 일괄 삭제
 - Docker 기반 실행
 - SQLite 기반 로컬 메타데이터 저장
 
 ## 실행 흐름
 
+먼저 `.env` 파일을 만들고 로컬 환경 값을 입력합니다.
+
 ```bash
-cp .env.example .env
-# .env에서 J3_MOUNT_PATH, APP_BASE_URL, 초기 비밀번호를 수정
+touch .env
+```
+
+예:
+
+```env
+J3_MOUNT_PATH=/Volumes/SAMSUNG
+APP_BASE_URL=http://192.168.0.10:8000
+ADMIN_PASSWORD=원하는_관리자_비밀번호
+LCK_PASSWORD=원하는_lck_비밀번호
+CSE_PASSWORD=원하는_cse_비밀번호
+```
+
+실행:
+
+```bash
 docker compose up
 ```
 
@@ -117,9 +134,10 @@ J3_MOUNT_PATH=/tmp docker compose down
 ## 저장소 원칙
 
 - 원본 미디어 파일은 DB에 넣지 않고 외장/로컬 파일시스템에 저장합니다.
-- DB에는 사용자, 권한, 폴더 메타데이터, 업로드 기록, 썸네일 상태만 저장합니다.
+- DB에는 사용자, 권한, 폴더 메타데이터, 업로드 기록만 저장합니다.
 - 실제 저장소 루트는 환경 변수로 설정합니다.
-- SQLite DB와 썸네일은 Docker named volume이 아니라 로컬 `./data` 폴더에 저장합니다.
+- SQLite DB는 Docker named volume이 아니라 로컬 `./data` 폴더에 저장합니다.
+- 미리보기는 별도 썸네일 파일을 만들지 않고 저장된 원본 파일을 사용합니다.
 
 예시:
 
@@ -204,9 +222,10 @@ SELECT id, original_name, stored_relative_path, created_at FROM uploads ORDER BY
 - `PATCH /api/folders/{id}`
 - `POST /api/uploads`
 - `GET /api/uploads`
-- `GET /api/uploads/{id}/thumbnail`
+- `GET /api/uploads/{id}/preview`
+- `POST /api/test-data/clear`
 
 ## 주의
 
 - 인터넷 공개를 전제로 하지 않습니다. 같은 Wi-Fi 로컬 접속용입니다.
-- iPhone 원본 사진/영상은 그대로 저장하고, 미리보기 생성 실패는 업로드 실패로 처리하지 않습니다.
+- iPhone 원본 사진/영상은 그대로 저장합니다.

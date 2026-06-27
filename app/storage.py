@@ -5,10 +5,8 @@ from pathlib import Path
 from uuid import uuid4
 import re
 import shutil
-import subprocess
 
 from fastapi import HTTPException, UploadFile
-from PIL import Image, ImageOps
 
 TOKEN_PATTERN = re.compile(r"\{([a-z_]+)\}")
 SAFE_NAME_PATTERN = re.compile(r"[^A-Za-z0-9가-힣._ -]+")
@@ -157,47 +155,20 @@ async def save_upload_file(upload: UploadFile, target: Path, max_size_bytes: int
     return size
 
 
-def create_thumbnail(source: Path, thumbnail_root: Path, media_type: str, upload_id: int) -> str | None:
-    thumbnail_root.mkdir(parents=True, exist_ok=True)
-    relative = Path(f"{upload_id}.jpg")
-    target = thumbnail_root / relative
-
-    try:
-        if media_type == "image":
-            with Image.open(source) as image:
-                image = ImageOps.exif_transpose(image)
-                image.thumbnail((640, 640))
-                image.convert("RGB").save(target, "JPEG", quality=82)
-        elif media_type == "video":
-            subprocess.run(
-                [
-                    "ffmpeg",
-                    "-y",
-                    "-ss",
-                    "00:00:01",
-                    "-i",
-                    str(source),
-                    "-frames:v",
-                    "1",
-                    "-vf",
-                    "scale='min(640,iw)':-2",
-                    str(target),
-                ],
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        else:
-            return None
-    except Exception:
-        target.unlink(missing_ok=True)
-        return None
-
-    return str(relative)
-
-
 def remove_file_quietly(path: Path) -> None:
     if path.is_dir():
         shutil.rmtree(path, ignore_errors=True)
     else:
         path.unlink(missing_ok=True)
+
+
+def prune_empty_directories(root: Path) -> None:
+    if not root.exists():
+        return
+
+    for path in sorted(root.rglob("*"), key=lambda item: len(item.parts), reverse=True):
+        if path.is_dir():
+            try:
+                path.rmdir()
+            except OSError:
+                pass

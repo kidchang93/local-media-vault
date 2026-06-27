@@ -265,6 +265,12 @@ button:disabled {
   color: var(--ink);
 }
 
+.danger-button {
+  border: 1px solid rgba(160, 58, 42, 0.28);
+  background: #fff;
+  color: var(--danger);
+}
+
 .icon-button {
   min-height: 38px;
   border: 1px solid rgba(23, 23, 23, 0.12);
@@ -455,6 +461,10 @@ progress {
   object-fit: cover;
   font-size: 12px;
   font-weight: 800;
+}
+
+video.thumb {
+  background: #111;
 }
 
 .card-body {

@@ -23,9 +23,10 @@ from app.db import (
 from app.storage import (
     COMMON_ROOT_PREFIX,
     classify_media,
-    create_thumbnail,
     build_family_storage_path,
     normalize_relative_folder,
+    prune_empty_directories,
+    remove_file_quietly,
     resolve_inside,
     save_upload_file,
 )
@@ -56,7 +57,6 @@ class FolderUpdate(BaseModel):
 def startup() -> None:
     settings = get_settings()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
-    settings.thumbnail_root.mkdir(parents=True, exist_ok=True)
     ensure_writable_upload_root(settings.upload_root)
     init_db(
         settings.db_path,
@@ -264,7 +264,7 @@ def list_uploads(
             FROM uploads
             WHERE user_id = ?
             ORDER BY id DESC
-            LIMIT 100
+            LIMIT 10
             """,
             (user["id"],),
         ).fetchall()
@@ -279,7 +279,7 @@ def list_uploads(
             "sizeBytes": row["size_bytes"],
             "thumbnailStatus": row["thumbnail_status"],
             "createdAt": row["created_at"],
-            "thumbnailUrl": f"/api/uploads/{row['id']}/thumbnail",
+            "previewUrl": f"/api/uploads/{row['id']}/preview",
         }
         for row in rows
     ]
@@ -425,8 +425,8 @@ def update_folder(
     return folder_response(new_relative_path, folder_id=folder_id, display_name=new_display_name)
 
 
-@app.get("/api/uploads/{upload_id}/thumbnail")
-def thumbnail(
+@app.get("/api/uploads/{upload_id}/preview")
+def preview_upload(
     upload_id: int,
     user=Depends(get_current_user),
     settings: Settings = Depends(get_settings),
@@ -434,19 +434,48 @@ def thumbnail(
     with connect(settings.db_path) as conn:
         row = conn.execute(
             """
-            SELECT thumbnail_relative_path
+            SELECT stored_relative_path, mime_type
             FROM uploads
             WHERE id = ? AND user_id = ?
             """,
             (upload_id, user["id"]),
         ).fetchone()
-    if not row or not row["thumbnail_relative_path"]:
-        raise HTTPException(status_code=404, detail="미리보기가 없습니다.")
+    if not row:
+        raise HTTPException(status_code=404, detail="업로드 파일을 찾을 수 없습니다.")
 
-    path = resolve_inside(settings.thumbnail_root, row["thumbnail_relative_path"])
+    path = resolve_inside(settings.upload_root, row["stored_relative_path"])
     if not path.exists():
-        raise HTTPException(status_code=404, detail="미리보기 파일이 없습니다.")
-    return FileResponse(path, media_type="image/jpeg")
+        raise HTTPException(status_code=404, detail="원본 파일이 없습니다.")
+    return FileResponse(path, media_type=row["mime_type"])
+
+
+@app.post("/api/test-data/clear")
+def clear_test_data(
+    user=Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
+):
+    with connect(settings.db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT stored_relative_path, thumbnail_relative_path
+            FROM uploads
+            WHERE user_id = ?
+            """,
+            (user["id"],),
+        ).fetchall()
+
+    for row in rows:
+        remove_file_quietly(resolve_inside(settings.upload_root, row["stored_relative_path"]))
+        if row["thumbnail_relative_path"]:
+            remove_file_quietly(resolve_inside(settings.thumbnail_root, row["thumbnail_relative_path"]))
+
+    with connect(settings.db_path) as conn:
+        conn.execute("DELETE FROM uploads WHERE user_id = ?", (user["id"],))
+        conn.execute("DELETE FROM folders WHERE owner_user_id = ?", (user["id"],))
+
+    prune_empty_directories(resolve_inside(settings.upload_root, COMMON_ROOT_PREFIX))
+    prune_empty_directories(settings.thumbnail_root)
+    return {"ok": True, "deletedUploads": len(rows)}
 
 
 @app.post("/api/uploads")
@@ -480,22 +509,14 @@ async def upload_files(
             )
             upload_id = cursor.lastrowid
 
-        thumbnail_relative = create_thumbnail(
-            target,
-            settings.thumbnail_root,
-            media_type,
-            upload_id,
-        )
-        thumbnail_status = "ready" if thumbnail_relative else "failed"
-
         with connect(settings.db_path) as conn:
             conn.execute(
                 """
                 UPDATE uploads
-                SET thumbnail_relative_path = ?, thumbnail_status = ?
+                SET thumbnail_relative_path = NULL, thumbnail_status = ?
                 WHERE id = ?
                 """,
-                (thumbnail_relative, thumbnail_status, upload_id),
+                ("original", upload_id),
             )
 
         results.append(
@@ -506,8 +527,8 @@ async def upload_files(
                 "mediaType": media_type,
                 "mimeType": mime_type,
                 "sizeBytes": size,
-                "thumbnailStatus": thumbnail_status,
-                "thumbnailUrl": f"/api/uploads/{upload_id}/thumbnail",
+                "thumbnailStatus": "original",
+                "previewUrl": f"/api/uploads/{upload_id}/preview",
             }
         )
 

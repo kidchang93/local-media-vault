@@ -4,6 +4,7 @@ const loginForm = document.querySelector("#loginForm");
 const uploadForm = document.querySelector("#uploadForm");
 const logoutButton = document.querySelector("#logoutButton");
 const refreshButton = document.querySelector("#refreshButton");
+const clearTestDataButton = document.querySelector("#clearTestDataButton");
 const displayName = document.querySelector("#displayName");
 const permissionText = document.querySelector("#permissionText");
 const uploadList = document.querySelector("#uploadList");
@@ -107,13 +108,13 @@ async function loadUploads() {
     const card = document.createElement("article");
     card.className = "card";
 
-    const thumb =
-      item.thumbnailStatus === "ready"
-        ? `<img class="thumb" src="${item.thumbnailUrl}" alt="">`
-        : `<div class="thumb">${item.mediaType === "video" ? "영상" : "사진"}</div>`;
+    const preview =
+      item.mediaType === "video"
+        ? `<video class="thumb" src="${item.previewUrl}" controls preload="metadata"></video>`
+        : `<img class="thumb" src="${item.previewUrl}" alt="" loading="lazy">`;
 
     card.innerHTML = `
-      ${thumb}
+      ${preview}
       <div class="card-body">
         <div class="name"></div>
         <div class="meta">${formatBytes(item.sizeBytes)} · ${item.mediaType}</div>
@@ -167,6 +168,23 @@ logoutButton.addEventListener("click", async () => {
 });
 
 refreshButton.addEventListener("click", loadUploads);
+
+clearTestDataButton.addEventListener("click", async () => {
+  const ok = confirm("현재 계정의 업로드 기록과 저장된 테스트 파일을 삭제할까요?");
+  if (!ok) return;
+
+  clearTestDataButton.disabled = true;
+  try {
+    const result = await request("/api/test-data/clear", { method: "POST" });
+    showMessage(`테스트 데이터 ${result.deletedUploads}개를 삭제했습니다.`);
+    await loadFolders();
+    await loadUploads();
+  } catch (error) {
+    showMessage(error.message, true);
+  } finally {
+    clearTestDataButton.disabled = false;
+  }
+});
 
 async function createFolderFromInput() {
   const relativePath = folderPathInput.value.trim();

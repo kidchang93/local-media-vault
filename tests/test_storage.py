@@ -8,6 +8,7 @@ from app.storage import (
     build_family_storage_path,
     build_user_storage_path,
     normalize_relative_folder,
+    prune_empty_directories,
     render_template,
     resolve_inside,
     sanitize_filename,
@@ -99,6 +100,20 @@ class StoragePathTests(unittest.TestCase):
 
     def test_sanitize_filename_removes_path_segments(self) -> None:
         self.assertEqual(sanitize_filename("../../IMG:0001.HEIC"), "IMG_0001.HEIC")
+
+    def test_prune_empty_directories_keeps_non_empty_paths(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp) / "family"
+            empty = root / "album" / "2026-06-27"
+            non_empty = root / "keep"
+            empty.mkdir(parents=True)
+            non_empty.mkdir(parents=True)
+            (non_empty / "IMG_0001.JPG").write_text("photo", encoding="utf-8")
+
+            prune_empty_directories(root)
+
+            self.assertFalse((root / "album").exists())
+            self.assertTrue(non_empty.exists())
 
 
 if __name__ == "__main__":
